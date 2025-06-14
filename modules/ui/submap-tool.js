@@ -9,6 +9,10 @@ function openSubmapTool() {
     width: "32em",
     position: {my: "center", at: "center", of: "svg"},
     buttons: {
+      Seleccionar_Area_Manualmente: function() {
+      enableManualAreaSelection();
+      $(this).dialog("close");
+    },
       Submap: function () {
         closeDialogs();
         generateSubmap();
@@ -94,4 +98,54 @@ function openSubmapTool() {
       group.dataset.size = Math.max(rn((size + size / scale) / 2, 2), 1) * scale;
     }
   }
+}
+
+let selectingArea = false;
+let start = null, end = null;
+let selectionRect = null;
+
+function enableManualAreaSelection() {
+  selectingArea = true;
+  mapSvg.style.cursor = "crosshair";
+
+  mapSvg.addEventListener("mousedown", startSelection);
+  mapSvg.addEventListener("mousemove", drawSelection);
+  mapSvg.addEventListener("mouseup", finishSelection);
+}
+
+function startSelection(e) {
+  if (!selectingArea) return;
+  start = getMapCoordinates(e);
+  if (selectionRect) selectionRect.remove();
+  selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  selectionRect.setAttribute("fill", "rgba(0, 0, 255, 0.2)");
+  selectionRect.setAttribute("stroke", "blue");
+  selectionRect.setAttribute("stroke-dasharray", "4");
+  mapSvg.appendChild(selectionRect);
+}
+
+function drawSelection(e) {
+  if (!selectingArea || !start) return;
+  end = getMapCoordinates(e);
+  const x = Math.min(start.x, end.x);
+  const y = Math.min(start.y, end.y);
+  const width = Math.abs(start.x - end.x);
+  const height = Math.abs(start.y - end.y);
+  selectionRect.setAttribute("x", x);
+  selectionRect.setAttribute("y", y);
+  selectionRect.setAttribute("width", width);
+  selectionRect.setAttribute("height", height);
+}
+
+function finishSelection(e) {
+  if (!selectingArea) return;
+  end = getMapCoordinates(e);
+  selectingArea = false;
+  mapSvg.style.cursor = "";
+  // Ahora tienes start y end, pásalos a generateSubmap o guarda para su uso
+  mapSvg.removeEventListener("mousedown", startSelection);
+  mapSvg.removeEventListener("mousemove", drawSelection);
+  mapSvg.removeEventListener("mouseup", finishSelection);
+  // Llama a generateSubmap con las coordenadas seleccionadas
+  generateSubmapWithArea(start, end);
 }
