@@ -149,3 +149,40 @@ function finishSelection(e) {
   // Llama a generateSubmap con las coordenadas seleccionadas
   generateSubmapWithArea(start, end);
 }
+function generateSubmapWithArea(start, end) {
+  INFO && console.group("generateSubmapWithArea");
+
+  // 1. Calcula el área seleccionada
+  const x0 = Math.min(start.x, end.x);
+  const y0 = Math.min(start.y, end.y);
+  const x1 = Math.max(start.x, end.x);
+  const y1 = Math.max(start.y, end.y);
+
+  // 2. Ajusta la vista y el tamaño SVG al área seleccionada
+  viewX = -x0 * scale;
+  viewY = -y0 * scale;
+  svgWidth = (x1 - x0) * scale;
+  svgHeight = (y1 - y0) * scale;
+
+  // 3. Recalcula el tamaño del mapa y otros parámetros
+  recalculateMapSize(x0, y0);
+
+  const submapPointsValue = byId("submapPointsInput").value;
+  const globalPointsValue = byId("pointsInput").value;
+  if (submapPointsValue !== globalPointsValue) changeCellsDensity(submapPointsValue);
+
+  // 4. Define las proyecciones para el recorte de submapa
+  const projection = (x, y) => [(x - x0) * scale, (y - y0) * scale];
+  const inverse = (x, y) => [x / scale + x0, y / scale + y0];
+
+  applyGraphSize();
+  fitMapToScreen();
+  resetZoom(0);
+  undraw();
+  Resample.process({projection, inverse, scale});
+
+  if (byId("submapRescaleBurgStyles").checked) rescaleBurgStyles(scale);
+  drawLayers();
+
+  INFO && console.groupEnd("generateSubmapWithArea");
+}
